@@ -23,10 +23,18 @@ type Line struct {
 	Mode          string          `json:"modeName"`
 	CreatedAt     time.Time       `json:"created"`
 	ModifiedAt    time.Time       `json:"modified"`
-	Disruptions   []interface{}   `json:"disruptions"`
-	LineStatuses  []interface{}   `json:"lineStatuses"`
+	Disruptions   interface{}     `json:"disruptions"`
+	LineStatuses  []*LineStatus   `json:"lineStatuses"`
 	RouteSections []*RouteSection `json:"routeSections"`
 	ServiceTypes  []*ServiceTypes `json:"serviceTypes"`
+}
+
+type LineStatus struct {
+	ID              int         `json:"id"`
+	Severity        int         `json:"statusSeverity"`
+	Description     string      `json:"statusSeverityDescription"`
+	CreatedAt       string      `json:"created"`
+	ValidityPeriods interface{} `json:"validityPeriods"`
 }
 
 // ServiceTypes is a TFL service type
@@ -74,6 +82,23 @@ func (l *LineWrapper) ListRoutesByLine(inLines []string, serviceType string) (li
 	}
 
 	url := fmt.Sprintf("%s/Line/%s/Route?%s", RootURL, strings.Join(inLines, ","), qs.Encode())
+
+	err = l.http.GetJSON(url, &lines)
+
+	return
+}
+
+// GetLineStatus gets the line status of for given line ids e.g Minor Delays
+func (l *LineWrapper) GetLineStatus(ids []string, extended bool) (lines []*Line, err error) {
+	qs := url.Values{
+		"detail": []string{fmt.Sprintf("%t", extended)},
+	}
+
+	if len(ids) > MaxIDs {
+		return nil, ErrTooMuchInput
+	}
+
+	url := fmt.Sprintf("%s/Line/%s/Status?%s", RootURL, strings.Join(ids, ","), qs.Encode())
 
 	err = l.http.GetJSON(url, &lines)
 
